@@ -303,7 +303,8 @@ async def me_command(client, message):
 @ignore
 async def general_command(client, message):
     prefix = '*'
-    if not message.text.startswith(prefix):
+    text = message.text or ''
+    if not text.startswith(prefix):
         return
     await send_react(client, message, "🤔")
     models = [
