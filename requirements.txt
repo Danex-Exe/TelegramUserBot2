@@ -1,0 +1,4 @@
+pyrogram
+g4f[all]
+googletrans
+aiofiles
