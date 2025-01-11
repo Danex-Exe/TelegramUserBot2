@@ -1,11 +1,32 @@
+# Функция очистки консоли
+def clear(message: str = None):
+    import platform, os
+    if platform.system() == "Windows":
+        os.system("cls")
+    if platform.system() == 'Linux':
+        os.system("clear")
+    if message:
+        print(message)
+    if platform.system() not in ['Windows', 'Linux']:
+        print('Программу невозможно запустить на вашей ОС!')
+        quit()
+
 # Импорт модулей
-from pyrogram import Client, filters, enums
-from pyrogram.errors import FloodWait
-from pyrogram.types import Message
-from g4f.client import Client as ClientGPT
-from databaze.databaze import DataBaze, DataFile
-import time, os, datetime, re, json, asyncio, pyrogram, sys, io, g4f, httpx
-from googletrans import Translator
+try:
+    from pyrogram import Client, filters, enums
+    from pyrogram.errors import FloodWait
+    from pyrogram.types import Message
+    from g4f.client import Client as ClientGPT
+    from databaze.databaze import DataBaze, DataFile
+    import time, os, datetime, re, json, asyncio, pyrogram, subprocess, sys, requests, io, platform, g4f, httpx
+    from googletrans import Translator
+except:
+    import os
+    clear('Вам необходимо установить модули')
+    os.system('pause')
+    os.system('pip install -r requirements.txt')
+    clear('Вы успешно установили модули, перезапустите бота!')
+    quit()
 
 # Банер
 app_title = """\n\n\n\n\n\n\n                                                                                                                         
@@ -35,7 +56,8 @@ data_default = {
     },
     "users": {},
     "other": {
-        "antispam": "on"
+        "antispam": "on",
+        "current_version": "None"
     }
 }
 user_default = {
@@ -70,19 +92,6 @@ def ignore(func):
 
 # Функция паузы
 pause = lambda: os.system(command='pause')
-
-# Функция очистки консоли
-def clear(message: str = None):
-    import platform, os
-    if platform.system() == "Windows":
-        os.system("cls")
-    if platform.system() == 'Linux':
-        os.system("clear")
-    if message:
-        print(message)
-    if platform.system() not in ['Windows', 'Linux']:
-        print('Программу невозможно запустить на вашей ОС!')
-        quit()
 
 # Функция получения текущего времени и даты
 get_datetime = lambda: datetime.datetime.now().strftime(format='%Y-%m-%d %H:%M:%S')
@@ -577,3 +586,94 @@ log.write(data=f"\n{'#'*15} {get_datetime()} {'#'*15}", rewrite=False)
 if data.read() is None:
     data.create()
     data.write(data=data_default)
+
+
+# Класс цветов
+class Color:
+    def __init__(self, esc_type):
+        self.esc_type = esc_type
+        self.black = f'{self.esc_type}[30m'
+        self.red = f'{self.esc_type}[31m'
+        self.green = f'{self.esc_type}[32m'
+        self.yellow = f'{self.esc_type}[33m'
+        self.blue = f'{self.esc_type}[34m'
+        self.white = f'{self.esc_type}[97m'
+        self.reset = f'{self.esc_type}[0m'
+    def rgb_color(self, r, g, b):
+        return f'{self.esc_type}[38;2;{r};{g};{b}m'
+    def rgb_bgcolor(self, r, g, b):
+        return f'{self.esc_type}[48;2;{r};{g};{b}m'
+    def color_message(self, message, color):
+        return f'{color}{message}{self.reset}'
+    
+# Функция перезапуска бота
+def restart():
+    python = sys.executable
+    os.execv(python, [python] + sys.executable.argv)
+
+# Функция ожидания
+def waiting():
+    if platform.system() == "Windows":
+        os.system("pause")
+    if platform.system() == 'Linux':
+        os.system("clear")
+    if platform.system() not in ['Windows', 'Linux']:
+        print('Программу невозможно запустить на вашей ОС!')
+        quit()
+
+# Функция анимирования текста
+def animate_message(message: str, local_color: str = None, speed: float = 0.015):
+    for i in message:
+        print(color.color_message(i, local_color) if local_color else i , end="", flush=True)
+        time.sleep(speed)
+
+# Функция выключения приложения
+def stop():
+    print(color.color_message("\n\nВы успешно завершили работу програмы", color.green))
+    waiting()
+    clear()
+    quit()
+
+# Функция подтвреждения
+def confirm(message: str, speed: float = 0.015): # Функция для подтверждения действия
+    try: # Проверка на ошибки
+        while True: # Цикл для подтверждения действия
+            clear() # Очищаем консоль
+            animate_message(message, speed=speed) # Анимация сообщения
+            t = input() # Получаем ввод пользователя
+            if type(t) == str: t.lower() # Проверка на строку
+            match t:
+                case 'y': return True # Подтверждаем действие
+                case 'n': return False # Отменяем действие
+                case _: pass # Если ничего не введено
+    except KeyboardInterrupt: # При нажатии Ctrl+C
+        return False # Отменяем действие
+
+# Проверка обновлений
+def check_update():
+    temp = data.read()
+    response = requests.get("https://api.github.com/repos/Danex-Exe/TelegramUserBot2/releases")
+    if response.status_code == 200:
+        releases = response.json()
+        if releases:
+            version = releases[0]['tag_name']
+            if 'other' in temp and 'current_version' in temp['other']:
+                if temp['other']['current_version'] != version and temp['other']['current_version'] != 'None':
+                    if confirm('Доступная новая версия программы, хотите обновить ее? (y/n): '):
+                        subprocess.run(['git', '-C', os.getcwd(), 'pull'], check=True)
+                        restart()
+                else:
+                    temp['other']['current_version'] = version
+                    data.write(temp)
+            else:
+                print('Найдено обновление, загрузка...')
+                data.write(data_default)
+                subprocess.run(['git', '-C', os.getcwd(), 'pull'], check=True)
+                restart()
+
+    else:
+        animate_message("\n\n\n\nПроблема с подключением к интернету", color.red)
+        quit()
+    
+color = Color('\033') # Класс для использования цвета в командной строке
+check_update() # Проверяем наличие обновлений
