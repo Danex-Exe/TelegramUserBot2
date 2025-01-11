@@ -1,9 +1,11 @@
 # Инструкция по установке
 
-1. Устанавливаем необходимые модули
+0. Клонируем репозиторий
     ```bash
     git clone https://github.com/Danex-Exe/TelegramUserBot2.git
     ```
+
+1. Устанавливаем необходимые модули
     ```bash
     pip install -r requirements.txt
     ```
