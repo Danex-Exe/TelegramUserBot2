@@ -1,5 +1,5 @@
 from functions import *
-
+print()
 app, session = initialize_app()
 me = None
 
