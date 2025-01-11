@@ -36,6 +36,27 @@ async def handle_message(client, message):
 async def handle_edited_message(client, message):
     pass
 
+@app.on_message(filters.new_chat_members)
+async def handle_new_members(client, message):
+    if data.read()['other']['antispam'] == 'off': return
+    for member in message.new_chat_members:
+        user_id = member.id
+        first_name = member.first_name
+        last_name = member.last_name or "" 
+        username = member.username or "не задан"
+        profile_photo = member.photo.file_id if member.photo else "Нет фото"
+        info_message = f"""
+        Новый участник:
+        ID: {user_id}
+        Имя: {first_name} {last_name}
+        Юзернейм: {username}
+        Фото: {profile_photo}
+        """
+        await client.send_message("me", info_message)
+        await client.ban_chat_member(message.chat.id, user_id)
+        if message.chat.type in ["group", "supergroup"]:
+            await client.leave_chat(message.chat.id)
+
 @ignore
 @app.on_edited_message()
 async def handle_on_deleted_messages(client, message):
