@@ -2,6 +2,7 @@
 
 1. Устанавливаем необходимые модули
     ```bash
+    git clone https://github.com/Danex-Exe/TelegramUserBot2.git
     pip install -r requirements.txt
     git clone https://github.com/Danex-Exe/databaze.git
     ```
