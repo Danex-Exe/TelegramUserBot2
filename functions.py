@@ -4,7 +4,7 @@ from pyrogram.errors import FloodWait
 from pyrogram.types import Message
 from g4f.client import Client as ClientGPT
 from databaze.databaze import DataBaze, DataFile
-import time, os, datetime, re, json, asyncio, pyrogram, sys, io, g4f
+import time, os, datetime, re, json, asyncio, pyrogram, sys, io, g4f, httpx
 from googletrans import Translator
 
 # Банер
@@ -32,6 +32,10 @@ data_default = {
         "current_session": 'account',
         "api_id": None,
         "api_hash": None
+    },
+    "users": {},
+    "other": {
+        "antispam": "on"
     }
 }
 user_default = {
@@ -41,6 +45,17 @@ user_default = {
     }
 }
 
+# Функция скачивания изображения из интернета
+async def download_image(url, save_path):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        if response.status_code == 200:
+            with open(save_path, 'wb') as f:
+                f.write(response.content)
+            return save_path
+        else:
+            raise Exception(f"Ошибка загрузки изображения: {response.status_code}")
+        
 # Декоратор игнорирования/обработки ошибок
 def ignore(func):
     async def wrapper(*args, **kwargs):
@@ -124,9 +139,11 @@ async def gpt(prompt, user_id: str = None):
     
 # Функция перевода текста на английский
 async def translate_text(text, src_lang='auto', dest_lang='en'):
-    translator = Translator()
-    translated = await translator.translate(text, src=src_lang, dest=dest_lang)
-    return translated.text
+    try: 
+        translator = Translator()
+        translated = await translator.translate(text, src=src_lang, dest=dest_lang)
+        return translated.text
+    except: return None
 
 # Тестирование кода
 async def execute_and_measure(code):
@@ -170,7 +187,7 @@ async def me_command(client, message):
     prefix = '.'
     animations = {
         '.venom': {
-            "text": 'Ехал Venom через Venom.\n Видит Venom в реке Venom.\n Сунул Venom руку в Venom.\n Venom Venom Venom Venom.\n **Venom.**',
+            "text": 'Ехал Venom через Venom.$NEXTSTRING Видит Venom в реке Venom.$NEXTSTRING Сунул Venom руку в Venom.$NEXTSTRING Venom Venom Venom Venom.$NEXTSTRING **Venom.**',
             "delay": 0.15,
             "type": 'add' # reset
         }
@@ -240,12 +257,13 @@ async def me_command(client, message):
             (f'{prefix}gpt messages add user/system Сообщение', 'Добавить дефолтное сообщение для всех чатов', 'gpt', ['гпт', 'chatgpt', 'чатгпт', 'ugn', 'пзе']),
             (f'{prefix}gpt messages remove ID_Сообщения', 'Удалить дефолтное сообщение', 'gpt', ['гпт', 'chatgpt', 'чатгпт', 'ugn', 'пзе']),
             (f'{prefix}gpt messages clear', 'Очистить историю сообщений всех пользователей GPT', 'gpt', ['гпт', 'chatgpt', 'чатгпт', 'ugn', 'пзе']),
+            (f'{prefix}avatar', 'Генерирует аватар по запросу и автоматически ставит его', 'avatar', ['ava', 'ава', 'аватар'])
         ]
         current_comand = 'other'
         for i in commands:
             if i[0] == message.text.split()[0].lower() or message.text.split()[0].lower()[1:] in i[3]: current_comand = i[2]
         for i in animations:
-            if i[0] == message.text.split()[0].lower(): current_comand = 'animation'
+            if i == message.text.split()[0].lower(): current_comand = 'animation'
 
         match current_comand:
             case 'help':
@@ -253,6 +271,41 @@ async def me_command(client, message):
                 result = 'Список доступных команд:\n'
                 for i in commands: result += f'\n<code>{i[0]}</code> - {i[1]}'
                 await message.reply(result, parse_mode=enums.parse_mode.ParseMode.HTML)
+
+            case 'avatar':
+                des = text.strip(message.text.split()[0])
+                if len(des.split()) >= 1:
+                    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+                    loop = asyncio.get_event_loop()
+                    prompt = await translate_text(des)
+                    try:
+                        response = await loop.run_in_executor(executor=None, func=lambda: ClientGPT.images.generate(
+                            model="flux",
+                            prompt=prompt,
+                            response_format="url"
+                        ))
+
+                        await send_react(client, message, "👍")
+                        image_url = response.data[0].url
+                        local_image_path = 'profile_photo.jpeg'
+                        await download_image(image_url, local_image_path)
+                        await client.set_profile_photo(photo=local_image_path)
+                        if os.path.exists(local_image_path):
+                            os.remove(local_image_path)
+                        photos = [p async for p in client.get_chat_photos("me")]
+                        valid_photos = [p for p in photos if p and hasattr(p, 'file_id')]
+                        if len(valid_photos) > 1:
+                            try:
+                                file_ids_to_delete = [p.file_id for p in valid_photos[1:]]
+                                await client.delete_profile_photos(file_ids_to_delete)
+                            except Exception as e: await message.edit(f"Ошибка при удалении фотографий: {str(e)}")
+                        else: pass
+                    except Exception as e: 
+                        await send_react(client, message, "👎")
+                        await message.edit(f"Произошла ошибка при генерации изображения: {str(e)}")
+                else:
+                    await send_react(client, message, "👎")
+                    await message.edit('Вы не указали описание для генерации аватара')
 
             case 'test':
                 title = "🤖    Тестирование кода"
@@ -271,13 +324,16 @@ async def me_command(client, message):
                 try:
                     res = []
                     if 'text' in animations[message.text.split()[0]]:
+                        await client.send_reaction(message.chat.id, message.id, "👍")
                         for i in animations[message.text.split()[0]]['text'].split():
                             if 'type' in animations[message.text.split()[0]]:
                                 if animations[message.text.split()[0]]['type'] == 'add':
-                                    res.append(i)
-                                    await message.edit(" ".join(res))
-                                else: await message.edit(i)
-                                await client.send_reaction(message.chat.id, message.id, "👍")
+                                    res.append(i.replace('$NEXTSTRING', '\n'))
+                                    try: await message.edit(" ".join(res).replace('\n ', '\n'))
+                                    except: pass
+                                else:
+                                    try: await message.edit(i.replace('$NEXTSTRING', '\n'))
+                                    except: pass
                                 await asyncio.sleep(animations[message.text.split()[0]]['delay'] if 'delay' in animations[message.text.split()[0]] else 0.2)
                             else: 
                                 await send_react(client, message, "👎")
@@ -288,15 +344,42 @@ async def me_command(client, message):
                         await message.edit('Неверный формат анимации, запуск не возможен!')
 
                 except Exception as e:
-                    await client.send_reaction(message.chat.id, message.id, "👎")
-                    await message.edit('Произошла ошибка: ' + e)
+                    await send_react(client, message, "👎")
+                    await message.edit(f'Произошла ошибка: {e}')
+            
+            case 'antispam':
+                temp = data.read()
+                match text.strip(text.split()[0]):
+                    case 'on':
+                        if temp['other']['antispam'] == 'on':
+                            await send_react(client, message, "👎")
+                            await message.edit('У вас уже включена функция антиспама')
+                        else:
+                            temp['other']['antispam'] = 'on'
+                            data.write(temp)
+                            await send_react(client, message, "👍")
+                            await message.edit('Вы успешно включили функцию антиспама')
+                    case 'off':
+                        if temp['other']['antispam'] == 'off':
+                            await send_react(client, message, "👎")
+                            await message.edit('У вас уже выключена функция антиспама')
+                        else:
+                            temp['other']['antispam'] = 'off'
+                            data.write(temp)
+                            await send_react(client, message, "👍")
+                            await message.edit('Вы успешно выключили функцию антиспама')
+                    case 'help':
+                        await send_react(client, message, "👍")
+                    case _:
+                        await send_react(client, message, "👎")
+                        await message.edit(f'Вы ввели неверную подкоманду!\nИспользуйте команду `{prefix}antispam help` для получения полного списка доступных подкоманд')
 
             case 'other':
-                await client.send_reaction(message.chat.id, message.id, "👎")
+                await send_react(client, message, "👎")
                 await message.reply('Команды не существует')
             
             case _:
-                await client.send_reaction(message.chat.id, message.id, "👎")
+                await send_react(client, message, "👎")
                 await message.reply('Команда еще не реботает')
 
 # Основные функции команд бота
