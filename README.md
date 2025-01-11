@@ -2,6 +2,8 @@
 
 ### 0. Клонируем репозиторий
     git clone https://github.com/Danex-Exe/TelegramUserBot2.git
+###
+    git config --global --add safe.directory Путь_до_репозитория
 
 ### 1. Устанавливаем необходимые модули
     pip install -r requirements.txt
