@@ -51,12 +51,12 @@ app_title = """\n\n\n\n\n\n\n
 data_default = {
     "bot": {
         "current_session": 'account',
-        "api_id": None,
-        "api_hash": None
+        "api_id": 'None',
+        "api_hash": 'None'
     },
     "users": {},
     "other": {
-        "antispam": "on",
+        "antispam": "off",
         "current_version": "None"
     }
 }
@@ -110,14 +110,34 @@ async def send_react(client, message, react):
 # Инициализация бота
 def initialize_app(session_folder: str = "sessions"):
     app_name = data.read()['bot']['current_session']
-    if app_name:
+    temp = data.read()
+    if 'bot' in temp and 'current_session' in temp['bot'] and 'api_id' in temp['bot'] and 'api_hash' in temp['bot'] and temp['bot']['current_session'] != 'None' and temp['bot']['api_id'] != 'None' and temp['bot']['api_hash'] != 'None':
         os.system(command=f'title [BOT] {app_name}')
         os.makedirs(name=session_folder, exist_ok=True)
         return Client(name=app_name, api_id=int(data.read()['bot']["api_id"]), api_hash=data.read()['bot']["api_hash"], workdir=session_folder), app_name
     else:
         clear()
-        print('Не указана сессия!')
-        quit()
+        app_name = data.read()['bot']['current_session']
+        session_name = input('Введите название сессии (default - account): ') or 'account'
+        API_id = input("Введите API_id: ") or 'None'
+        API_hash = input("Введите API_hash: ") or 'None'
+        if 'bot' in temp and 'current_session' in temp['bot'] and 'api_id' in temp['bot'] and 'api_hash' in temp['bot']:
+            temp['bot']['current_session'] = session_name
+            temp['bot']['api_id'] = API_id
+            temp['bot']['api_hash'] = API_hash
+            data.write(temp)
+        else:
+            temp = data_default
+            temp['bot']['current_session'] = session_name
+            temp['bot']['api_id'] = API_id
+            temp['bot']['api_hash'] = API_hash
+            data.write(temp)
+        os.system(command=f'title [BOT] {app_name}')
+        os.makedirs(name=session_folder, exist_ok=True)
+        try: return Client(name=app_name, api_id=int(data.read()['bot']["api_id"]), api_hash=data.read()['bot']["api_hash"], workdir=session_folder), app_name
+        except Exception as e:
+            clear(f'Произошла ошибка: {e}')
+            quit()
 
 # Работа с ChatGPT
 ClientGPT = ClientGPT()
@@ -406,7 +426,6 @@ async def general_command(client, message):
     subcommands = [
         (f'{prefix} Вопрос', 'Спросить вопрос у ChatGPT', 'main'),
         (f'{prefix}{prefix} Описание', 'Сгенерировать изображение по описанию', 'image'),
-        (f'{prefix}regen', 'Переделывает ваше фото по запросу', 'regen'),
         (f'{prefix}help', 'Список доступных команд', 'help'),
         (f'{prefix}clear', 'Очистить историю сообщений', 'clear'),
         (f'{prefix}model', 'Текущая модель ChatGPT', 'model'),
@@ -495,47 +514,6 @@ async def general_command(client, message):
                 await send_react(client, message, "👎")
                 await message.reply(f"Произошла ошибка при генерации изображения: {str(e)}")
 
-        case 'regen':
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-            loop = asyncio.get_event_loop()
-            if message.photo:
-                try: photo = message.photo
-                except: photo = message.photo[-1]
-                file_id = photo.file_id
-                image_data = await client.download_media(file_id)
-            elif message.reply_to_message and message.reply_to_message.photo:
-                try: photo = message.reply_to_message.photo
-                except: photo = message.reply_to_message.photo[-1]
-                file_id = photo.file_id
-                image_data = await client.download_media(file_id)
-            
-            else:
-                await message.reply("Пожалуйста, отправьте фотографию или ответьте на сообщение с фотографией!")
-                return
-            
-            try:
-                description = message.text.replace(f'{prefix}regen', '')
-                description = description if description != '' else 'Немного измени картинку'
-                description = await translate_text(description)
-                response = await loop.run_in_executor(
-                    executor=None,
-                    func=lambda: ClientGPT.images.create_variation(
-                        image=image_data,
-                        model="dall-e-3",
-                        description=description
-                    )
-                )
-                await send_react(client, message, "👍")
-                image_url = response.data[0].url[1:]
-                await client.send_photo(
-                    chat_id=message.chat.id,
-                    photo=open('generated_'+image_url, 'rb'),
-                    caption="Вот ваша вариация изображения!"
-                )
-            except Exception as e:
-                await send_react(client, message, "👎")
-                await message.reply(f"Произошла ошибка при генерации изображения: {str(e)}")
-            
         case 'models':
             await send_react(client, message, "👍")
             result = 'Список доступных моделей:\n'
@@ -660,16 +638,25 @@ def check_update():
             if 'other' in temp and 'current_version' in temp['other']:
                 if temp['other']['current_version'] != version and temp['other']['current_version'] != 'None':
                     if confirm('Доступная новая версия программы, хотите обновить ее? (y/n): '):
-                        subprocess.run(['git', '-C', os.getcwd(), 'pull'], check=True)
-                        restart()
+                        temp['other']['current_version'] = version
+                        data.write(temp)
+                        try:
+                            subprocess.run(['git', '-C', os.getcwd(), 'pull'], check=True)
+                        except:
+                            os.system('git config --global user.name "User"')
+                            os.system('git config --global user.email "user@google.com"')
+                            os.system(f'git config --global --add safe.directory {os.getcwd()}')
+                            os.system('git pull origin main --allow-unrelated-histories')
+                            os.system('pause')
+                        clear('Успешно, перезапустите программу')
+                        quit()
                 else:
                     temp['other']['current_version'] = version
                     data.write(temp)
             else:
-                print('Найдено обновление, загрузка...')
-                data.write(data_default)
-                subprocess.run(['git', '-C', os.getcwd(), 'pull'], check=True)
-                restart()
+                temp = data_default
+                temp['other']['current_version'] = version
+                data.write(temp)
 
     else:
         animate_message("\n\n\n\nПроблема с подключением к интернету", color.red)
