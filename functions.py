@@ -144,7 +144,11 @@ ClientGPT = ClientGPT()
 
 @ignore
 async def gpt(prompt, user_id: str = None):
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    import platform
+
+    if platform.system() == 'Windows':
+        from asyncio import WindowsSelectorEventLoopPolicy
+        asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
     loop = asyncio.get_event_loop()
     if type(prompt) == str:
         messages=[
@@ -304,7 +308,11 @@ async def me_command(client, message):
             case 'avatar':
                 des = text.strip(message.text.split()[0])
                 if len(des.split()) >= 1:
-                    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+                    import platform
+
+                    if platform.system() == 'Windows':
+                        from asyncio import WindowsSelectorEventLoopPolicy
+                        asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
                     loop = asyncio.get_event_loop()
                     prompt = await translate_text(des)
                     try:
@@ -493,7 +501,11 @@ async def general_command(client, message):
             await message.reply(result, parse_mode=enums.parse_mode.ParseMode.HTML)
 
         case 'image':
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+            import platform
+
+            if platform.system() == 'Windows':
+                from asyncio import WindowsSelectorEventLoopPolicy
+                asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
             loop = asyncio.get_event_loop()
             prompt = await translate_text(message.text.strip('**'))
             try:
