@@ -17,7 +17,7 @@ try:
     from pyrogram.errors import FloodWait
     from pyrogram.types import Message
     from g4f.client import Client as ClientGPT
-    from databaze.databaze import DataBaze, DataFile
+    from databaze.DataBaze import DataBaze, DataFile
     import time, os, datetime, re, json, asyncio, pyrogram, subprocess, sys, requests, io, platform, g4f, httpx
     from googletrans import Translator
 except:
