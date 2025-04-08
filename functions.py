@@ -62,7 +62,7 @@ data_default = {
 }
 user_default = {
     'gpt': {
-        'model': 'gpt-4',
+        'model': 'gpt-4o',
         'messages': []
     }
 }
@@ -290,7 +290,6 @@ async def me_command(client, message):
             (f'{prefix}gpt messages add user/system Сообщение', 'Добавить дефолтное сообщение для всех чатов', 'gpt', ['гпт', 'chatgpt', 'чатгпт', 'ugn', 'пзе']),
             (f'{prefix}gpt messages remove ID_Сообщения', 'Удалить дефолтное сообщение', 'gpt', ['гпт', 'chatgpt', 'чатгпт', 'ugn', 'пзе']),
             (f'{prefix}gpt messages clear', 'Очистить историю сообщений всех пользователей GPT', 'gpt', ['гпт', 'chatgpt', 'чатгпт', 'ugn', 'пзе']),
-            (f'{prefix}avatar', 'Генерирует аватар по запросу и автоматически ставит его', 'avatar', ['ava', 'ава', 'аватар'])
         ]
         current_comand = 'other'
         for i in commands:
@@ -304,45 +303,6 @@ async def me_command(client, message):
                 result = 'Список доступных команд:\n'
                 for i in commands: result += f'\n<code>{i[0]}</code> - {i[1]}'
                 await message.reply(result, parse_mode=enums.parse_mode.ParseMode.HTML)
-
-            case 'avatar':
-                des = text.strip(message.text.split()[0])
-                if len(des.split()) >= 1:
-                    import platform
-
-                    if platform.system() == 'Windows':
-                        from asyncio import WindowsSelectorEventLoopPolicy
-                        asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
-                    loop = asyncio.get_event_loop()
-                    prompt = await translate_text(des)
-                    try:
-                        response = await loop.run_in_executor(executor=None, func=lambda: ClientGPT.images.generate(
-                            model="flux",
-                            prompt=prompt,
-                            response_format="url"
-                        ))
-
-                        await send_react(client, message, "👍")
-                        image_url = response.data[0].url
-                        local_image_path = 'profile_photo.jpeg'
-                        await download_image(image_url, local_image_path)
-                        await client.set_profile_photo(photo=local_image_path)
-                        if os.path.exists(local_image_path):
-                            os.remove(local_image_path)
-                        photos = [p async for p in client.get_chat_photos("me")]
-                        valid_photos = [p for p in photos if p and hasattr(p, 'file_id')]
-                        if len(valid_photos) > 1:
-                            try:
-                                file_ids_to_delete = [p.file_id for p in valid_photos[1:]]
-                                await client.delete_profile_photos(file_ids_to_delete)
-                            except Exception as e: await message.edit(f"Ошибка при удалении фотографий: {str(e)}")
-                        else: pass
-                    except Exception as e: 
-                        await send_react(client, message, "👎")
-                        await message.edit(f"Произошла ошибка при генерации изображения: {str(e)}")
-                else:
-                    await send_react(client, message, "👎")
-                    await message.edit('Вы не указали описание для генерации аватара')
 
             case 'test':
                 title = "🤖    Тестирование кода"
@@ -428,12 +388,91 @@ async def general_command(client, message):
         return
     await send_react(client, message, "🤔")
     models = [
-        ('gpt-4', 'GPT-4 — это мощная языковая модель, обладающая способностью генерировать текст, понимать контекст и выполнять разнообразные задачи обработки языка на высоком уровне.'),
-        ('gpt-3.5-turbo', 'Более ранняя версия модели, которая все еще эффективна для многих задач. Более быстрая, по сравнению с GPT-4')
+        ('gpt-3.5-turbo', 'test'), 
+        ('gpt-4', 'test'), 
+        ('gpt-4o', 'test'), 
+        ('gpt-4o-mini', 'test'), 
+        ('o1', 'test'), 
+        ('o1-mini', 'test'), 
+        ('o3-mini', 'test'), 
+        ('GigaChat:latest', 'test'), 
+        ('meta-ai', 'test'), 
+        ('llama-2-7b', 'test'), 
+        ('llama-3-8b', 'test'), 
+        ('llama-3-70b', 'test'), 
+        ('mixtral-8x7b', 'test'), 
+        ('mistral-nemo', 'test'), 
+        ('hermes-3', 'test'), 
+        ('phi-3.5-mini', 'test'), 
+        ('phi-4', 'test'), 
+        ('wizardlm-2-7b', 'test'), 
+        ('gemini-2.0', 'test'), 
+        ('gemini-1.5-flash', 'test'), 
+        ('gemini-1.5-pro', 'test'), 
+        ('gemini-2.0-flash', 'test'), 
+        ('gemini-2.0-flash-thinking', 'test'), 
+        ('claude-3-haiku', 'test'), 
+        ('claude-3.5-sonnet', 'test'), 
+        ('claude-3.7-sonnet', 'test'), 
+        ('reka-core', 'test'), 
+        ('blackboxai', 'test'), 
+        ('blackboxai-pro', 'test'), 
+        ('command-r', 'test'), 
+        ('command-r-plus', 'test'), 
+        ('command-r7b', 'test'), 
+        ('command-a', 'test'), 
+        ('qwen-1.5-7b', 'test'), 
+        ('qwen-2-72b', 'test'), 
+        ('qwen-2-vl-7b', 'test'), 
+        ('qwen-2.5', 'test'), 
+        ('qwen-2.5-72b', 'test'), 
+        ('qwen-2.5-coder-32b', 'test'), 
+        ('qwen-2.5-1m', 'test'), 
+        ('qwen-2-5-max', 'test'), 
+        ('qwq-32b', 'test'), 
+        ('qvq-72b', 'test'), 
+        ('pi', 'test'), 
+        ('deepseek-chat', 'test'), 
+        ('deepseek-v3', 'test'), 
+        ('deepseek-r1', 'test'), 
+        ('janus-pro-7b', 'test'), 
+        ('grok-3', 'test'), 
+        ('grok-3-r1', 'test'), 
+        ('sonar', 'test'), 
+        ('sonar-pro', 'test'), 
+        ('sonar-reasoning', 'test'), 
+        ('sonar-reasoning-pro', 'test'), 
+        ('r1-1776', 'test'),
+        ('nemotron-70b', 'test'),
+        ('dbrx-instruct', 'test'),
+        ('glm-4', 'test'),
+        ('MiniMax', 'test'),
+        ('yi-34b', 'test'),
+        ('dolphin-2.6', 'test'),
+        ('dolphin-2.9', 'test'),
+        ('airoboros-70b', 'test'),
+        ('lzlv-70b', 'test'),
+        ('minicpm-2.5', 'test'),
+        ('olmo-1-7b', 'test'),
+        ('olmo-2-13b', 'test'),
+        ('olmo-2-32b', 'test'),
+        ('olmo-4-synthetic', 'test'),
+        ('tulu-3-1-8b', 'test'),
+        ('tulu-3-70b', 'test'),
+        ('tulu-3-405b', 'test'),
+        ('lfm-40b', 'test'),
+        ('evil', 'test'),
+        ('sdxl-turbo', 'test'),
+        ('sd-3.5', 'test'),
+        ('flux', 'test'),
+        ('flux-pro', 'test'),
+        ('flux-dev', 'test'),
+        ('flux-schnell', 'test'),
+        ('dall-e-3', 'test'),
+        ('midjourney', 'test')
     ]
     subcommands = [
         (f'{prefix} Вопрос', 'Спросить вопрос у ChatGPT', 'main'),
-        (f'{prefix}{prefix} Описание', 'Сгенерировать изображение по описанию', 'image'),
         (f'{prefix}help', 'Список доступных команд', 'help'),
         (f'{prefix}clear', 'Очистить историю сообщений', 'clear'),
         (f'{prefix}model', 'Текущая модель ChatGPT', 'model'),
@@ -499,32 +538,6 @@ async def general_command(client, message):
             result = 'Список доступных команд:\n'
             for i in subcommands: result += f'\n<code>{i[0]}</code> - {i[1]}'
             await message.reply(result, parse_mode=enums.parse_mode.ParseMode.HTML)
-
-        case 'image':
-            import platform
-
-            if platform.system() == 'Windows':
-                from asyncio import WindowsSelectorEventLoopPolicy
-                asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
-            loop = asyncio.get_event_loop()
-            prompt = await translate_text(message.text.strip('**'))
-            try:
-                response = await loop.run_in_executor(executor=None, func=lambda: ClientGPT.images.generate(
-                    model="flux",
-                    prompt=prompt,
-                    response_format="url"
-                ))
-
-                await send_react(client, message, "👍")
-                image_url = response.data[0].url
-                await client.send_photo(
-                    chat_id=message.chat.id,
-                    photo=image_url,
-                    caption="Вот ваше изображение!"
-                )
-            except Exception as e: 
-                await send_react(client, message, "👎")
-                await message.reply(f"Произошла ошибка при генерации изображения: {str(e)}")
 
         case 'models':
             await send_react(client, message, "👍")
